@@ -3,6 +3,27 @@ import { json } from '@sveltejs/kit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GEMINI_KEY } from '$env/static/private';
 
+async function remotePdfToPart(url, path, displayName) {
+    const pdfBuffer = await fetch(url).then((response) => response.arrayBuffer());
+    const binaryPdf = Buffer.from(pdfBuffer);
+    fs.writeFileSync(path, binaryPdf, 'binary');
+
+    const uploadResult = await fileManager.uploadFile(
+        path,
+        {
+            mimeType: "application/pdf",
+            displayName,
+        },
+    );
+
+    return {
+        fileData: {
+            fileUri: uploadResult.file.uri,
+            mimeType: uploadResult.file.mimeType,
+        },
+    };
+}
+
 export async function POST({ request }) {
 	try {
 		const formData = await request.formData();
@@ -19,21 +40,10 @@ export async function POST({ request }) {
 		// Generate structured summary and chart data with a specific prompt
 		const prompt = `
 		Analyze the following PDF content and provide:
+		- A summary of the rates and a table with the rates
+		- Make sure that all rates are included in the summary and chart
+		- After a quick summary of date on rates copy the table data
 		
-		1. A concise summary (max 300 words) of the key points.
-		2. Extract 5 or more key metrics from the document that could be visualized in a chart.
-		
-		For the metrics, format your response as a JSON object with the following structure:
-		{
-		  "title": "Title for the chart",
-		  "labels": ["Label1", "Label2", "Label3", "Label4", "Label5"],
-		  "values": [value1, value2, value3, value4, value5]
-		}
-		
-		Make sure the values are numeric and represent important quantitative information from the document.
-		If exact numbers aren't available, always provide reasonable estimates based on the text.
-		
-		Start your response with "SUMMARY:" followed by the summary text, then "CHART_DATA:" followed by the JSON object.
 	  `;
 
 		const result = await model.generateContent([
@@ -62,7 +72,7 @@ export async function POST({ request }) {
 		if (chartDataMatch && chartDataMatch[1]) {
 			try {
 				// Find JSON object in the text
-				let jsonStr = chartDataMatch[1].trim();
+			let jsonStr = chartDataMatch[1].trim();
 				
 				// Remove code fence backticks and language identifier if present
 				jsonStr = jsonStr.replace(/```json|```/g, '').trim();

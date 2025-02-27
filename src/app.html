@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<svelte:head>
+			<title>Fligno Research</title>
+			<style>
+				/* width */
+				::-webkit-scrollbar {
+					width: 10px;
+				}
+
+				/* Track */
+				::-webkit-scrollbar-track {
+					background: #f1f1f1;
+				}
+
+				/* Handle */
+				::-webkit-scrollbar-thumb {
+					background: #989a7e;
+				}
+
+				/* Handle on hover */
+				::-webkit-scrollbar-thumb:hover {
+					background: #555;
+				}
+			</style>
+		</svelte:head>
+		%sveltekit.head%
+	</head>
+
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

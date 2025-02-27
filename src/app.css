@@ -1,0 +1,131 @@
+.app-container {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.content-container {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 2rem;
+	width: 100%;
+}
+
+.sidebar-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.5rem;
+	background-color: var(--cds-ui-background, #f4f4f4);
+	border-bottom: 1px solid var(--cds-ui-03, #e0e0e0);
+}
+
+.sidebar-header h3 {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.history-item {
+	padding: 0.75rem 1rem;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.history-item:hover {
+	background-color: var(--cds-hover-ui, #e5e5e5);
+}
+
+.history-item.active {
+	background-color: var(--cds-selected-ui, #e0e0e0);
+	border-left: 4px solid var(--cds-interactive, #0f62fe);
+}
+
+.history-item-content {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.history-item-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.history-question {
+	margin: 0;
+	font-size: 0.875rem;
+}
+
+.history-time {
+	font-size: 0.75rem;
+	color: var(--cds-text-secondary, #6f6f6f);
+}
+
+.empty-history {
+	padding: 1rem;
+	margin: 5rem;
+	text-align: center;
+	color: var(--cds-text-secondary, #6f6f6f);
+}
+
+.summary-content {
+	white-space: pre-line;
+	line-height: 1.5;
+	margin-top: 1rem;
+}
+
+.answer-box {
+	margin-top: 1.5rem;
+	padding: 1rem;
+	background-color: var(--cds-layer, #f4f4f4);
+	border-radius: 4px;
+	border-left: 4px solid var(--cds-interactive, #0f62fe);
+}
+
+.upload-tile,
+.summary-tile,
+.chart-tile,
+.question-tile {
+	height: 100%;
+	margin-bottom: 1.5rem;
+}
+
+.mt-4 {
+	margin-top: 1rem;
+}
+
+.mb-4 {
+	margin-bottom: 1rem;
+}
+
+.no-chart-data {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 400px;
+	background-color: var(--cds-layer, #f4f4f4);
+	border-radius: 4px;
+	color: var(--cds-text-secondary, #6f6f6f);
+}
+
+h2 {
+	margin-top: 0;
+	margin-bottom: 1rem;
+}
+
+h3 {
+	margin-top: 0;
+	margin-bottom: 0.5rem;
+}
+
+:global(.bx--file__selected-file) {
+	max-width: 100%;
+}
+
+@media (max-width: 768px) {
+	.content-container {
+		padding: 1rem;
+	}
+}

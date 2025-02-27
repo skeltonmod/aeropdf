@@ -17,12 +17,10 @@ export async function POST({ request }) {
 		const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
 		const prompt = `
-        Based on the following PDF content, please answer this question:
-        
-        Question: ${question}
+        Based on the following PDF content, please generate a report for all of the rates
         
         Provide a clear, concise answer based only on the information in the document.
-        If the answer cannot be determined from the document, state that clearly.
+        If the answer cannot be determined from the document, state that clearly. and generate an excel file with the rates.
       `;
 
 		const result = await model.generateContent([
@@ -35,6 +33,7 @@ export async function POST({ request }) {
 			prompt
 		]);
 		const response = await result.response;
+		console.log(response)
 		const answer = response.text();
 
 		return json({

@@ -19,9 +19,18 @@ interface Document {
     timestamp: string;
 }
 
+// New interface for PDF documents
+interface DocumentOutput {
+    id?: number;
+    filename: string;
+    base64: string;
+    timestamp: string;
+}
+
 export class MyDatabase extends Dexie {
     questions!: Dexie.Table<Question>;
     documents!: Dexie.Table<Document>;
+    documentOutputs!: Dexie.Table<DocumentOutput>;
 
     constructor() {
         super('pdfAnalyzerDB');
@@ -105,9 +114,50 @@ export async function saveDocument(filename: string, base64: string, summary: st
     }
 }
 
+
+// New functions for document storage
+export async function saveDocumentOutput(filename: string, base64: string, summary: string, chartData: any) {
+    try {
+        // Check if document with the same filename exists
+        const existingDoc = await db.documentOutputs
+            .where('filename')
+            .equals(filename)
+            .first();
+        
+        if (existingDoc) {
+            // Update existing document
+            await db.documentOutputs.update(existingDoc.id as number, {
+                base64,
+                timestamp: new Date().toISOString()
+            });
+            return existingDoc.id;
+        } else {
+            // Create new document
+            const id = await db.documentOutputs.add({
+                filename,
+                base64,
+                timestamp: new Date().toISOString()
+            });
+            return id;
+        }
+    } catch (error) {
+        console.error('Error saving document to IndexedDB:', error);
+        throw error;
+    }
+}
+
 export async function getRecentDocuments(limit = 30) {
 	try {
 		return await db.documents.orderBy('timestamp').reverse().limit(limit).toArray();
+	} catch (error) {
+		console.error('Error retrieving documents from IndexedDB:', error);
+		return [];
+	}
+}
+
+export async function getRecentDocumentOutput(limit = 30) {
+	try {
+		return await db.documentOutputs.orderBy('timestamp').reverse().limit(limit).toArray();
 	} catch (error) {
 		console.error('Error retrieving documents from IndexedDB:', error);
 		return [];
@@ -121,6 +171,20 @@ export async function getDocument(id: string) {
             .equals(id)
 			.or('filename')
 			.equals(id)
+            .first();
+    } catch (error) {
+        console.error('Error retrieving document from IndexedDB:', error);
+        return null;
+    }
+}
+
+export async function getDocumentOutput(id: string) {
+    try {
+        return await db.documentOutputs
+            .where('id')
+            .equals(id)
+            .or('filename')
+            .equals(id)
             .first();
     } catch (error) {
         console.error('Error retrieving document from IndexedDB:', error);

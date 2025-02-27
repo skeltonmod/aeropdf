@@ -30,10 +30,17 @@
 		saveDocument,
 		getDocument,
 		clearDocuments,
-		getRecentDocuments
+		getRecentDocuments,
+
+		saveDocumentOutput,
+
+		getDocumentOutput
+
+
 	} from '$lib';
 
 	let pdfFile: string | Blob | null = null;
+	let excelFile: string | Blob | null = null;
 	let pdfFileName: string | Blob = '';
 	let pdfBase64: string = '';
 	let loading = false;
@@ -44,6 +51,7 @@
 
 	let recentQuestions: string | any[] = [];
 	let recentDocuments: string | any[] = [];
+	let recentDocumentOutputs: string | any[] = [];
 	let totalQuestions = 0;
 	let paginationSettings = { pageSize: 10, page: 1 };
 	let isSideNavExpanded = true;
@@ -58,11 +66,76 @@
 		// Initialize database and load recent questions
 		await loadRecentQuestions();
 		await loadSavedDocuments();
+		await loadSavedDocumentOutputs();
 	});
 
 	async function loadSavedDocuments() {
 		console.log(await getRecentDocuments(paginationSettings.pageSize));
 		recentDocuments = await getRecentDocuments(paginationSettings.pageSize);
+	}
+	
+
+	async function loadSavedDocumentOutputs() {
+		console.log(await getRecentDocuments(paginationSettings.pageSize));
+		recentDocumentOutputs = await getRecentDocuments(paginationSettings.pageSize);
+	}
+
+
+	async function processExcel(){
+		if (!excelFile) return;
+
+		loading = true;
+		if (excelFile instanceof Blob) {
+			pdfFileName = excelFile;
+		} else if (typeof excelFile === 'string') {
+			pdfFileName = excelFile.split('/').pop() || excelFile;
+		}
+
+		try {
+			const formData = new FormData();
+			formData.append('pdf', excelFile);
+
+			pdfBase64 = await new Promise((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = () => {
+					const base64String = reader.result as string;
+					const base64Data = base64String.split(',')[1];
+					resolve(base64Data);
+				};
+				reader.onerror = reject;
+				reader.readAsDataURL(excelFile as Blob);
+			});
+
+			// Check if we have this document already processed
+			const existingDoc = await getDocumentOutput(pdfFile.name);
+			if (existingDoc) {
+				summary = existingDoc.summary;
+				chartData = prepareChartData(existingDoc.chartData);
+				console.log('Using cached document data');
+			} else {
+				// Send the pdf to the server for processing
+				formData.append('base64', pdfBase64);
+
+				const response = await fetch('/api/process-pdf', {
+					method: 'POST',
+					body: formData
+				});
+
+				if (!response.ok) throw new Error('Failed to process PDF');
+
+				const data = await response.json();
+				summary = data.summary;
+				chartData = prepareChartData(data.chartData);
+
+				// Save the document data
+				await saveDocumentOutput(pdfFile.name, pdfBase64, summary, data.chartData);
+			}
+		} catch (error: any) {
+			console.error('Error processing PDF:', error);
+		} finally {
+			loading = false;
+			await loadSavedDocuments();
+		}
 	}
 
 	async function processPDF() {
@@ -121,6 +194,62 @@
 			await loadSavedDocuments();
 		}
 	}
+
+	async function saveOutputExcel(){
+		if (!pdfFile) return;
+
+		loading = true;
+		if (pdfFile instanceof Blob) {
+			pdfFileName = pdfFile;
+		} else if (typeof pdfFile === 'string') {
+			pdfFileName = pdfFile.split('/').pop() || pdfFile;
+		}
+
+		try {
+			const formData = new FormData();
+			formData.append('pdf', pdfFile);
+
+			pdfBase64 = await new Promise((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = () => {
+					const base64String = reader.result as string;
+					const base64Data = base64String.split(',')[1];
+					resolve(base64Data);
+				};
+				reader.onerror = reject;
+				reader.readAsDataURL(pdfFile as Blob);
+			});
+
+			// Check if we have this document already processed
+			const existingDoc = await getDocumentOutput(pdfFile.name);
+			if (existingDoc) {
+				summary = existingDoc.summary;
+				console.log('Using cached document data');
+			} else {
+				// Send the pdf to the server for processing
+				formData.append('base64', pdfBase64);
+
+				const response = await fetch('/api/process-pdf', {
+					method: 'POST',
+					body: formData
+				});
+
+				if (!response.ok) throw new Error('Failed to process PDF');
+
+				const data = await response.json();
+				summary = data.summary;
+				chartData = prepareChartData(data.chartData);
+
+				// Save the document data
+				await saveDocumentOutput(pdfFile.name, pdfBase64, summary, data.chartData);
+			}
+		} catch (error: any) {
+			console.error('Error processing PDF:', error);
+		} finally {
+			loading = false;
+			await loadSavedDocumentOutputs();
+		}
+	} 
 
 	function prepareChartData(data: { labels: any[]; values: { [x: string]: any }; title: any }) {
 		if (!data) return null;
@@ -195,6 +324,14 @@
 	}
 
 	function handleFileChange(e: CustomEvent) {
+		const files = e.detail;
+		if (files && files.length > 0) {
+			pdfFile = files[0];
+			pdfBase64 = ''; // Reset base64 when file changes
+		}
+	}
+
+	function handleFileOutputChange(e: CustomEvent) {
 		const files = e.detail;
 		if (files && files.length > 0) {
 			pdfFile = files[0];
@@ -340,12 +477,28 @@
 								labelTitle="Upload a PDF file"
 								buttonLabel="Choose file"
 								labelDescription="Max file size: 10MB"
-								accept={['.pdf']}
+								accept={['.pdf', '.docx']}
 								on:change={handleFileChange}
 								class="mb-4"
 							/>
 							<Button on:click={processPDF} disabled={!pdfFile || loading} kind="primary">
 								Analyze PDF
+							</Button>
+						</Tile>
+					</Column>
+					<Column>
+						<Tile class="upload-tile">
+							<h2>Upload Output Excel</h2>
+							<FileUploader
+								labelTitle="Upload an Excel file"
+								buttonLabel="Choose file"
+								labelDescription="Max file size: 10MB"
+								accept={['.xlsx']}
+								on:change={handleFileOutputChange}
+								class="mb-4"
+							/>
+							<Button on:click={saveOutputExcel} disabled={!excelFile || loading} kind="primary">
+								Uplaod Excel Output
 							</Button>
 						</Tile>
 					</Column>
@@ -375,7 +528,7 @@
 					</Row>
 				{/if}
 
-				<Row>
+				<!-- <Row>
 					<Column>
 						<Tile class="question-tile">
 							<h2>Ask Questions About the Document</h2>
@@ -402,7 +555,7 @@
 							{/if}
 						</Tile>
 					</Column>
-				</Row>
+				</Row> -->
 			</Grid>
 		</div>
 	</Content>
